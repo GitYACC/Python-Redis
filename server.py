@@ -1,4 +1,5 @@
 import socket
+import threading
 
 """
 get(string) -> any
@@ -26,6 +27,8 @@ class ProtocolHandler:
                 return int(item[1:])
         
     def set(self, query: bytes):
+        if len(query) == 0: return
+
         q = query.decode().split()
         key = q[0]
         value = " ".join(q[1:])
@@ -53,24 +56,36 @@ class Server:
 
     def __init__(self):
         self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._server.bind((self.HOST, self.PORT))
-        self._conn = None
-        self._addr = None
         self._proto = ProtocolHandler()
 
-    def initialize(self):
-        self._server.listen()
-        self._conn, self._addr = self._server.accept()
+    def handle_client(self, conn: socket.socket, addr):
+        with conn:
+            while True:
+                data = conn.recv(1024)
+                if not data:
+                    break
+                res = self._proto.set(data)
+                conn.sendall(bytes(str(res), "utf-8"))
 
-    def loop(self):
-        while (data := self._conn.recv(1024)) != "END":
-            res = self._proto.set(data)
-            self._conn.sendall(bytes(str(res), "utf-8"))
+
+    def initialize(self):
+        self._server.listen(10)
+        while True:
+            conn, addr = self._server.accept()
+            client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
+            client_thread.start()
+
+    def close(self):
+        self._server.close()
 
 if __name__ == "__main__":
     server = Server()
-    server.initialize()
-    server.loop()
+    try:
+        server.initialize()
+    except KeyboardInterrupt:
+        server.close()
 
-    proto = ProtocolHandler()
-    print(proto.set("∞key £something,¢133"))
+    #proto = ProtocolHandler()
+    #print(proto.set("∞key £something,¢133"))

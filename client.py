@@ -21,9 +21,9 @@ class RedisClient:
         for item in value:
             match type(item).__name__:
                 case "str":
-                    packet += f"£{item},"
+                    packet += f"s{item},"
                 case "int" | "float":
-                    packet += f"¢{item}"
+                    packet += f"n{item}"
 
         self.client.sendall(bytes(f"l{key} {packet[:len(packet) - 1]}", "utf-8"))
         return self.client.recv(1024)
