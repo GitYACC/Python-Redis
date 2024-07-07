@@ -8,26 +8,32 @@ class RedisClient:
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((self.HOST, self.PORT))
 
-    def sets(self, key: str, value: str):
-        self.client.sendall(bytes(f"s{key} {value}", "utf-8"))
+    def set(self, key: str, value: str):
+        self.client.sendall(bytes(f"SET {key} {value}", "utf-8"))
         return self.client.recv(len(value))
-
-    def setn(self, key: str, value: int | float):
-        self.client.sendall(bytes(f"n{key} {value}", "utf-8"))
-        return self.client.recv(len(str(value)))
-
-    def setl(self, key: str, value: list):
-        packet = ""
-        for item in value:
-            match type(item).__name__:
-                case "str":
-                    packet += f"s{item},"
-                case "int" | "float":
-                    packet += f"n{item}"
-
-        self.client.sendall(bytes(f"l{key} {packet[:len(packet) - 1]}", "utf-8"))
+    
+    def get(self, key: str):
+        self.client.sendall(bytes(f"GET {key}", "utf-8"))
+        return self.client.recv(1024)
+    
+    def incr(self, key: str):
+        self.client.sendall(bytes(f"INCR {key}", "utf-8"))
+        return self.client.recv(1024)
+    
+    def decr(self, key: str):
+        self.client.sendall(bytes(f"DECR {key}", "utf-8"))
+        return self.client.recv(1024)
+    
+    def lpush(self, key: str, *values):
+        values = " ".join(map(lambda x: str(x), values))
+        self.client.sendall(bytes(f"LPUSH {key} {values}", "utf-8"))
+        return self.client.recv(1024)
+    
+    def rpush(self, key: str, *values):
+        values = " ".join(map(lambda x: str(x), values))
+        self.client.sendall(bytes(f"RPUSH {key} {values}", "utf-8"))
         return self.client.recv(1024)
 
 
 client = RedisClient()
-print(client.sets("Something", "Something Else"))
+print(client.incr("bike"))
